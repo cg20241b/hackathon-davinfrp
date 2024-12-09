@@ -6,13 +6,13 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#000000');
 
-// Set up the camera for perspective with a specific aspect ratio and view distance
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-
 // Set up the WebGL renderer to render the scene and append it to the HTML document
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+
+// Set up the camera for perspective with a specific aspect ratio and view distance
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
 // Variables for setting ambient light intensity
 const ambientIntensity = 0.200 + 0.137;  // Ambient light intensity
@@ -20,25 +20,26 @@ const ambientIntensity = 0.200 + 0.137;  // Ambient light intensity
 // Create geometry and material for cube, using custom shaders for visual effects
 const cubeSize = 1;
 const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+
 const cubeMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-        time: { value: 0.0 } // Time to change effects dynamically
-    },
-    vertexShader: `
-        void main() {
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);  // Shader for object position
-        }
-    `,
-    fragmentShader: `
-        uniform float time;
-        void main() {
-            vec3 color = vec3(1.0, 1.0, 1.0); // Pure white color
-            float intensity = 0.7 + sin(time * 1.0) * 0.3; // Subtle, continuous pulsing
-            intensity = pow(intensity, 2.0); // Smooth out the glow
-            gl_FragColor = vec4(color * intensity, intensity);  // Final color with glow
-        }
-    `,
-    transparent: true
+  uniforms: {
+      time: { value: 0.0 } // Time to change effects dynamically
+  },
+  vertexShader: `
+      void main() {
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);  // Shader for object position
+      }
+  `,
+  fragmentShader: `
+      uniform float time;
+      void main() {
+          vec3 color = vec3(1.0, 1.0, 1.0); // Pure white color
+          float intensity = max(0.7 + sin(time * 1.0) * 0.3, 1.0); // Only show maximum intensity
+          intensity = pow(intensity, 4.0); // Smooth out the glow
+          gl_FragColor = vec4(color * intensity, intensity);  // Final color with glow
+      }
+  `,
+  transparent: true
 });
 
 // Add the cube to the scene
@@ -53,7 +54,7 @@ scene.add(pointLight);
 // Font loader
 const fontLoader = new FontLoader();
 fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-    // Shader for letters with dynamic lighting and specular plastic using Phong model (medium shininess)
+    // Shader for letters with dynamic lighting and specular plastic (medium shininess)
     const LetterShader = new THREE.ShaderMaterial({
         uniforms: {
             lightPosition: { value: centralCube.position },
@@ -138,7 +139,7 @@ fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.
             varying vec3 vPosition;
 
             void main() {
-                // Same as LetterShader, calculating lighting for the number
+                // calculate the lighting for the number
                 vec3 lightDir = normalize(lightPosition - vPosition);
                 float distance = length(lightPosition - vPosition);
                 float attenuation = lightIntensity / (1.0 + 0.1 * distance * distance);
