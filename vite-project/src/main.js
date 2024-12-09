@@ -23,24 +23,30 @@ const ambientLightLevel = additionalAmbientIntensity + nrpAmbientIntensity;
 const cubeSize = 1;
 const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
 const cubeShaderMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-        time: { value: 0.0 }
-    },
-    vertexShader: `
-        void main() {
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    `,
-    fragmentShader: `
-        uniform float time;
-        void main() {
-            vec3 baseColor = vec3(1.0, 1.0, 1.0);
-            float brightness = max(0.7 + sin(time * 1.0) * 0.3, 1.0);
-            brightness = pow(brightness, 5.0);
-            gl_FragColor = vec4(baseColor * brightness, brightness);
-        }
-    `,
-    transparent: true
+  uniforms: {
+    time: { value: 0.0 } // Uniform to track time for dynamic effects
+  },
+  vertexShader: `
+      // Vertex Shader: Transforms each vertex to its correct screen position
+      void main() {
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+  `,
+  fragmentShader: `
+      uniform float time; // Time uniform to create dynamic brightness
+
+      void main() {
+          // Base white color
+          vec3 baseColor = vec3(1.0, 1.0, 1.0);
+          // Calculate brightness oscillating with time
+          float brightness = max(0.7 + sin(time * 1.0) * 0.3, 1.0);
+          // Enhance brightness to create a glowing effect
+          brightness = pow(brightness, 5.0);
+          // Set the final color with adjusted brightness
+          gl_FragColor = vec4(baseColor * brightness, brightness);
+      }
+  `,
+  transparent: true
 });
 
 // Add the cube to the scene
@@ -57,65 +63,76 @@ const fontLoader = new FontLoader();
 fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', (font) => {
     // Define shaders for alphabet and number text
     const alphabetShader = new THREE.ShaderMaterial({
-        uniforms: {
-            lightPosition: { value: centralCube.position },
-            lightIntensity: { value: 2.0 },
-            ambientIntensity: { value: ambientLightLevel },
-            diffuseColor: { value: new THREE.Color(0.5373, 0.8118, 0.9412) },
-            specularColor: { value: new THREE.Color(1.0, 1.0, 1.0) },
-            shininess: { value: 70.0 }
-        },
-        vertexShader: `
-            varying vec3 vNormal;
-            varying vec3 vPosition;
-            void main() {
-                vNormal = normalize(normalMatrix * normal);
-                vPosition = vec3(modelViewMatrix * vec4(position, 1.0));
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform vec3 lightPosition;
-            uniform float lightIntensity;
-            uniform float ambientIntensity;
-            uniform vec3 diffuseColor;
-            uniform vec3 specularColor;
-            uniform float shininess;
+      uniforms: {
+          lightPosition: { value: centralCube.position }, // Cube as the light source
+          lightIntensity: { value: 2.0 }, // Intensity of the light
+          ambientIntensity: { value: ambientLightLevel }, // Ambient light level
+          diffuseColor: { value: new THREE.Color(0.5373, 0.8118, 0.9412) }, // Baby blue diffuse color
+          specularColor: { value: new THREE.Color(1.0, 1.0, 1.0) }, // White specular highlight
+          shininess: { value: 70.0 } // Shininess for a plastic-like specular effect
+      },
+      vertexShader: `
+          // Vertex Shader: Computes surface normals and position
+          varying vec3 vNormal;
+          varying vec3 vPosition;
 
-            varying vec3 vNormal;
-            varying vec3 vPosition;
+          void main() {
+              // Transform and normalize the vertex normal
+              vNormal = normalize(normalMatrix * normal);
+              // Calculate the vertex position in camera space
+              vPosition = vec3(modelViewMatrix * vec4(position, 1.0));
+              // Project the position to screen space
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+      `,
+      fragmentShader: `
+          uniform vec3 lightPosition; // Position of the light source
+          uniform float lightIntensity; // Light source intensity
+          uniform float ambientIntensity; // Ambient light intensity
+          uniform vec3 diffuseColor; // Base color for diffuse lighting
+          uniform vec3 specularColor; // Specular highlight color
+          uniform float shininess; // Controls the sharpness of the specular highlight
 
-            void main() {
-                vec3 lightDirection = normalize(lightPosition - vPosition);
-                float dist = length(lightPosition - vPosition);
-                float attenuation = lightIntensity / (1.0 + 0.1 * dist * dist);
+          varying vec3 vNormal; // Interpolated normal vector
+          varying vec3 vPosition; // Interpolated position vector
 
-                vec3 ambient = ambientIntensity * diffuseColor;
-                float diff = max(dot(vNormal, lightDirection), 0.0);
-                vec3 diffuse = diff * diffuseColor * attenuation;
+          void main() {
+              // Direction from the vertex to the light source
+              vec3 lightDirection = normalize(lightPosition - vPosition);
+              // Distance from the vertex to the light source
+              float dist = length(lightPosition - vPosition);
+              // Attenuation factor based on distance
+              float attenuation = lightIntensity / (1.0 + 0.1 * dist * dist);
 
-                vec3 viewDirection = normalize(-vPosition);
-                vec3 reflectionDirection = reflect(-lightDirection, vNormal);
-                float specular = pow(max(dot(viewDirection, reflectionDirection), 0.0), shininess);
-                vec3 specularComponent = specular * specularColor * attenuation;
+              // Ambient lighting contribution
+              vec3 ambient = ambientIntensity * diffuseColor;
+              // Diffuse lighting contribution based on the angle of incidence
+              float diff = max(dot(vNormal, lightDirection), 0.0);
+              vec3 diffuse = diff * diffuseColor * attenuation;
 
-                gl_FragColor = vec4(ambient + diffuse + specularComponent, 1.0);
-            }
-        `
-    });
+              // Specular lighting contribution based on the viewer's angle
+              vec3 viewDirection = normalize(-vPosition);
+              vec3 reflectionDirection = reflect(-lightDirection, vNormal);
+              float specular = pow(max(dot(viewDirection, reflectionDirection), 0.0), shininess);
+              vec3 specularComponent = specular * specularColor * attenuation;
 
-    const digitShader = new THREE.ShaderMaterial({
-        uniforms: {
-            lightPosition: { value: centralCube.position },
-            lightIntensity: { value: 3.0 },
-            ambientIntensity: { value: ambientLightLevel },
-            diffuseColor: { value: new THREE.Color(1.0, 0.0, 0.0) },
-            specularColor: { value: new THREE.Color(1.0, 0.5, 0.5) },
-            shininess: { value: 200.0 }
-        },
-        vertexShader: alphabetShader.vertexShader,
-        fragmentShader: alphabetShader.fragmentShader
-    });
+              // Final color combining all components
+              gl_FragColor = vec4(ambient + diffuse + specularComponent, 1.0);
+          }
+      `
+  });
+
+  const digitShader = new THREE.ShaderMaterial({
+      // Reuse uniforms from the alphabet shader
+      uniforms: {
+          lightIntensity: { value: 3.0 }, // Higher intensity for metallic shine
+          diffuseColor: { value: new THREE.Color(1.0, 0.0, 0.0) }, // Red color
+          specularColor: { value: new THREE.Color(1.0, 0.5, 0.5) }, // Softer specular highlights
+          shininess: { value: 200.0 } // Sharper metallic specular effect
+      },
+      vertexShader: alphabetShader.vertexShader,
+      fragmentShader: alphabetShader.fragmentShader
+  });
 
     const letterGeometry = new TextGeometry('N', { font, size: 2, height: 0.2 });
     const letterMesh = new THREE.Mesh(letterGeometry, alphabetShader);
