@@ -195,6 +195,24 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
+// Add event listener for camera movement
+window.addEventListener('keydown', (event) => {
+  const moveStep = 0.2; // Define the step size for camera movement
+
+  switch (event.key) {
+      case 'A': // Move the camera left
+      case 'a': // Handle lowercase 'a'
+          camera.position.x -= moveStep;
+          break;
+
+      case 'D': // Move the camera right
+      case 'd': // Handle lowercase 'd'
+          camera.position.x += moveStep;
+          break;
+  }
+});
+
+
 // Set camera position on the z-axis
 camera.position.z = 7;
 
