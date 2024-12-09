@@ -165,7 +165,7 @@ fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.
         height: 0.2,
     });
     const letterMesh = new THREE.Mesh(letterGeometry, LetterShader);
-    letterMesh.position.set(-4, 0, 0);
+    letterMesh.position.set(-4, -0.5, 0);
     scene.add(letterMesh);
 
     // Create geometry and mesh for the number "7" with number shader
@@ -175,8 +175,24 @@ fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.
         height: 0.2,
     });
     const numberMesh = new THREE.Mesh(numberGeometry, NumberShader);
-    numberMesh.position.set(2, 0, 0); 
+    numberMesh.position.set(2.5, -0.5, 0); 
     scene.add(numberMesh);
+});
+
+window.addEventListener('keydown', (event) => {
+  const moveStep = 0.1; // Define the step size for cube movement
+
+  switch (event.key) {
+      case 'W': // Move the cube upward
+      case 'w': // Handle lowercase 'w'
+          centralCube.position.y += moveStep;
+          break;
+
+      case 'S': // Move the cube downward
+      case 's': // Handle lowercase 's'
+          centralCube.position.y -= moveStep;
+          break;
+  }
 });
 
 // Set camera position on the z-axis
@@ -188,6 +204,8 @@ function animate(time) {
     if (centralCube.material.uniforms) {
         centralCube.material.uniforms.time.value = time * 0.001;
     }
+
+    pointLight.position.copy(centralCube.position);
     
     renderer.render(scene, camera);  // Render scene with camera
     requestAnimationFrame(animate);  // Call animate function repeatedly
